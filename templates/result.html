@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="main-container p-5">
+            <div class="text-center mb-4">
+                <h1><i class="fas fa-check-circle text-success me-3"></i>Text Extraction Complete</h1>
+                <p class="text-muted">
+                    Processed using {{ method }} method
+                    {% if language %} | Language: {{ language }}{% endif %}
+                </p>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="alert alert-info">
+                        <i class="fas fa-file-image me-2"></i>
+                        <strong>File:</strong> {{ filename }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="result-card p-4 mb-4">
+                <h5 class="mb-3">
+                    <i class="fas fa-text-width me-2"></i>Extracted Text:
+                    <button class="btn btn-sm btn-outline-primary float-end" onclick="copyToClipboard()">
+                        <i class="fas fa-copy me-1"></i>Copy
+                    </button>
+                </h5>
+                <div class="border rounded p-3" style="background-color: #f8f9fa; min-height: 200px;">
+                    <pre id="extractedText" style="white-space: pre-wrap; font-family: 'Arial', sans-serif; margin: 0;">{{ text if text else 'No text found in the image.' }}</pre>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-info-circle text-info me-2"></i>Text Statistics
+                            </h6>
+                            <ul class="list-unstyled mb-0">
+                                <li><strong>Characters:</strong> <span id="charCount">{{ text|length if text else 0 }}</span></li>
+                                <li><strong>Words:</strong> <span id="wordCount">{{ text.split()|length if text else 0 }}</span></li>
+                                <li><strong>Lines:</strong> <span id="lineCount">{{ text.split('\n')|length if text else 0 }}</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-tools text-warning me-2"></i>Actions
+                            </h6>
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-sm btn-success" onclick="downloadText()">
+                                    <i class="fas fa-download me-1"></i>Download as TXT
+                                </button>
+                                <button class="btn btn-sm btn-info" onclick="shareText()">
+                                    <i class="fas fa-share me-1"></i>Share Text
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="{{ url_for('index') }}" class="btn btn-primary btn-custom">
+                    <i class="fas fa-upload me-2"></i>Upload Another Image
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function copyToClipboard() {
+    const text = document.getElementById('extractedText').textContent;
+    navigator.clipboard.writeText(text).then(function() {
+        // Show success message
+        const btn = event.target.closest('button');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check me-1"></i>Copied!';
+        btn.classList.replace('btn-outline-primary', 'btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalText;
+            btn.classList.replace('btn-success', 'btn-outline-primary');
+        }, 2000);
+    }).catch(function(err) {
+        console.error('Could not copy text: ', err);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        
+        alert('Text copied to clipboard!');
+    });
+}
+
+function downloadText() {
+    const text = document.getElementById('extractedText').textContent;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'extracted_text.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+function shareText() {
+    const text = document.getElementById('extractedText').textContent;
+    if (navigator.share) {
+        navigator.share({
+            title: 'Extracted Text',
+            text: text
+        }).catch(console.error);
+    } else {
+        // Fallback - copy to clipboard
+        copyToClipboard();
+        alert('Text copied to clipboard! You can now paste it anywhere.');
+    }
+}
+</script>
+{% endblock %} 
