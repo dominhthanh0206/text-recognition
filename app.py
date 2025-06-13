@@ -63,6 +63,25 @@ def extract_text_tesseract(image_path, language='eng'):
         available_langs = pytesseract.get_languages()
         print(f"Available languages: {available_langs}")
         print(f"TESSDATA_PREFIX: {os.environ.get('TESSDATA_PREFIX')}")
+        print(f"OS: {os.name}, Platform: {os.uname() if hasattr(os, 'uname') else 'Unknown'}")
+        
+        # Debug: Check all possible tessdata paths
+        possible_paths = [
+            '/usr/share/tesseract-ocr/5/tessdata',
+            '/usr/share/tesseract-ocr/4.00/tessdata', 
+            '/usr/share/tessdata',
+            '/usr/local/share/tessdata'
+        ]
+        for path in possible_paths:
+            exists = os.path.exists(path)
+            print(f"Path {path}: {'EXISTS' if exists else 'NOT FOUND'}")
+            if exists:
+                try:
+                    files = os.listdir(path)
+                    jpn_files = [f for f in files if 'jpn' in f.lower()]
+                    print(f"  Japanese files in {path}: {jpn_files}")
+                except Exception as e:
+                    print(f"  Cannot list {path}: {e}")
         
         if language not in available_langs:
             if language == 'jpn':
@@ -81,9 +100,15 @@ Alternative: Use the OpenAI Vision API option instead."""
         # Open image and extract text with specified language
         image = Image.open(image_path)
         
-        # Try with explicit tessdata path
-        config = f'--tessdata-dir "C:\\Program Files\\Tesseract-OCR\\tessdata"'
-        text = pytesseract.image_to_string(image, lang=language, config=config)
+        # Try with explicit tessdata path based on environment
+        tessdata_prefix = os.environ.get('TESSDATA_PREFIX')
+        if tessdata_prefix:
+            config = f'--tessdata-dir "{tessdata_prefix}"'
+            text = pytesseract.image_to_string(image, lang=language, config=config)
+        else:
+            # Fallback without explicit config
+            text = pytesseract.image_to_string(image, lang=language)
+        
         return text.strip()
     except pytesseract.TesseractNotFoundError:
         return """❌ Tesseract OCR is not installed or not in your PATH.
