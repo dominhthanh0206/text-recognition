@@ -55,6 +55,28 @@
             background: rgba(255, 255, 255, 0.1);
             backdrop-filter: blur(10px);
         }
+        .rikkei-logo {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+        .rikkei-logo:hover {
+            transform: scale(1.05);
+        }
+        .rikkei-logo img {
+            height: 35px;
+            width: auto;
+            display: block;
+            opacity: 0.8;
+        }
+        .rikkei-logo:hover img {
+            opacity: 1;
+        }
+        .main-container {
+            position: relative;
+        }
     </style>
 </head>
 <body>
