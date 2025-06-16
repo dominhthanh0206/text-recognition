@@ -212,7 +212,7 @@ def upload_file():
         return redirect(request.url)
     
     file = request.files['file']
-    method = request.form.get('method', 'tesseract')
+    method = request.form.get('method', 'gemini')
     language = request.form.get('language', 'eng')
     
     if file.filename == '':
@@ -255,7 +255,7 @@ def api_extract():
         return jsonify({'error': 'No file provided'}), 400
     
     file = request.files['file']
-    method = request.form.get('method', 'tesseract')
+    method = request.form.get('method', 'gemini')
     language = request.form.get('language', 'eng')
     
     if not allowed_file(file.filename):
