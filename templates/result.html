@@ -21,22 +21,35 @@
 
             <div class="row mb-4">
                 <div class="col-md-12">
-                    <div class="alert alert-info">
-                        <i class="fas fa-file-image me-2"></i>
-                        <strong>File:</strong> {{ filename }}
+                    <div class="card">
+                        <div class="card-header">
+                            <h6 class="mb-0">
+                                <i class="fas fa-image me-2"></i>Uploaded Image
+                            </h6>
+                        </div>
+                        <div class="card-body text-center">
+                            <img src="{{ image_data }}" alt="{{ filename }}" class="img-fluid rounded shadow" style="height: 200px; max-width: 100%;">
+                            <p class="text-muted mt-2 mb-0">
+                                <small><i class="fas fa-file me-1"></i>{{ filename }}</small>
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div class="result-card p-4 mb-4">
-                <h5 class="mb-3">
-                    <i class="fas fa-text-width me-2"></i>Extracted Text:
-                    <button class="btn btn-sm btn-outline-primary float-end" onclick="copyToClipboard()">
-                        <i class="fas fa-copy me-1"></i>Copy
-                    </button>
-                </h5>
-                <div class="border rounded p-3" style="background-color: #f8f9fa; min-height: 200px;">
-                    <pre id="extractedText" style="white-space: pre-wrap; font-family: 'Arial', sans-serif; margin: 0;">{{ text if text else 'No text found in the image.' }}</pre>
+            <div class="row mb-4">
+                <div class="col-md-12">
+                    <div class="result-card p-4">
+                        <h5 class="mb-3">
+                            <i class="fas fa-text-width me-2"></i>Extracted Text:
+                            <button class="btn btn-sm btn-outline-primary float-end" onclick="copyToClipboard()">
+                                <i class="fas fa-copy me-1"></i>Copy
+                            </button>
+                        </h5>
+                        <div class="border rounded p-3" style="background-color: #f8f9fa; min-height: 300px;">
+                            <pre id="extractedText" style="white-space: pre-wrap; font-family: 'Arial', sans-serif; margin: 0; line-height: 1.5;">{{ text if text else 'No text found in the image.' }}</pre>
+                        </div>
+                    </div>
                 </div>
             </div>
 
