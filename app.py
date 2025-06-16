@@ -4,20 +4,12 @@ import base64
 from flask import Flask, render_template, request, jsonify, flash, redirect, url_for
 from werkzeug.utils import secure_filename
 from PIL import Image
-import pytesseract
 import openai
 import google.generativeai as genai
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
-
-# Set TESSDATA_PREFIX environment variable if not set
-tessdata_path = r'C:\Program Files\Tesseract-OCR\tessdata'
-if os.path.exists(tessdata_path):
-    os.environ['TESSDATA_PREFIX'] = tessdata_path
-    # Also try setting pytesseract config
-    pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
@@ -43,129 +35,6 @@ def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-def extract_text_tesseract(image_path, language='eng'):
-    """Extract text using Tesseract OCR"""
-    try:
-        # Set TESSDATA_PREFIX for different environments
-        if os.name == 'nt':  # Windows
-            tessdata_path = r'C:\Program Files\Tesseract-OCR\tessdata'
-            if os.path.exists(tessdata_path):
-                os.environ['TESSDATA_PREFIX'] = tessdata_path
-        else:  # Linux/Unix (Railway, Docker)
-            tessdata_paths = [
-                '/usr/share/tesseract-ocr/5/tessdata',
-                '/usr/share/tesseract-ocr/4.00/tessdata',
-                '/usr/share/tessdata'
-            ]
-            for path in tessdata_paths:
-                if os.path.exists(path):
-                    os.environ['TESSDATA_PREFIX'] = path
-                    break
-        
-        # Check if Tesseract is available
-        pytesseract.get_tesseract_version()
-        
-        # Check if the requested language is available
-        available_langs = pytesseract.get_languages()
-        print(f"Available languages: {available_langs}")
-        print(f"TESSDATA_PREFIX: {os.environ.get('TESSDATA_PREFIX')}")
-        print(f"OS: {os.name}, Platform: {os.uname() if hasattr(os, 'uname') else 'Unknown'}")
-        
-        # Debug: Check all possible tessdata paths
-        possible_paths = [
-            '/usr/share/tesseract-ocr/5/tessdata',
-            '/usr/share/tesseract-ocr/4.00/tessdata', 
-            '/usr/share/tessdata',
-            '/usr/local/share/tessdata'
-        ]
-        for path in possible_paths:
-            exists = os.path.exists(path)
-            print(f"Path {path}: {'EXISTS' if exists else 'NOT FOUND'}")
-            if exists:
-                try:
-                    files = os.listdir(path)
-                    jpn_files = [f for f in files if 'jpn' in f.lower()]
-                    print(f"  Japanese files in {path}: {jpn_files}")
-                except Exception as e:
-                    print(f"  Cannot list {path}: {e}")
-        
-        if language not in available_langs:
-            if language == 'jpn':
-                return """❌ Japanese language data not found for Tesseract.
-
-🔧 To install Japanese language support:
-1. Download Japanese language data from: https://github.com/tesseract-ocr/tessdata
-2. Download 'jpn.traineddata' file
-3. Copy it to your Tesseract tessdata folder (usually C:\\Program Files\\Tesseract-OCR\\tessdata\\)
-4. Try again
-
-Alternative: Use the OpenAI Vision API option instead."""
-            else:
-                return f"❌ Language '{language}' is not available.\n\nAvailable languages: {', '.join(available_langs)}"
-        
-        # Open image and extract text with specified language
-        image = Image.open(image_path)
-        
-        # Try with explicit tessdata path based on environment
-        tessdata_prefix = os.environ.get('TESSDATA_PREFIX')
-        if tessdata_prefix:
-            config = f'--tessdata-dir "{tessdata_prefix}"'
-            text = pytesseract.image_to_string(image, lang=language, config=config)
-        else:
-            # Fallback without explicit config
-            text = pytesseract.image_to_string(image, lang=language)
-        
-        return text.strip()
-    except pytesseract.TesseractNotFoundError:
-        return """❌ Tesseract OCR is not installed or not in your PATH.
-
-🔧 To install Tesseract on Windows:
-1. Download from: https://github.com/UB-Mannheim/tesseract/wiki
-2. Run the installer as Administrator
-3. Make sure to check "Add Tesseract to PATH" during installation
-4. Restart your terminal and try again
-
-Alternative: Use the OpenAI Vision API option instead (requires API key)."""
-    except Exception as e:
-        error_msg = str(e)
-        return f"Error with Tesseract OCR: {error_msg}\n\nTip: Make sure Tesseract is properly installed and the selected language is supported."
-
-def extract_text_openai(image_path):
-    """Extract text using OpenAI Vision API"""
-    try:
-        if not openai.api_key:
-            return "OpenAI API key not configured"
-        
-        # Convert image to base64
-        with open(image_path, "rb") as image_file:
-            base64_image = base64.b64encode(image_file.read()).decode('utf-8')
-        
-        response = openai.chat.completions.create(
-            model="gpt-4-vision-preview",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": "Extract all text from this image. If there's no text, just say 'No text found'."
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{base64_image}"
-                            }
-                        }
-                    ]
-                }
-            ],
-            max_tokens=500
-        )
-        
-        return response.choices[0].message.content
-    except Exception as e:
-        return f"Error with OpenAI Vision API: {str(e)}"
-
 def extract_text_gemini(image_path):
     """Extract text using Google Gemini Vision API"""
     try:
@@ -186,14 +55,15 @@ def extract_text_gemini(image_path):
         # Generate text extraction with improved prompt
         response = model.generate_content([
             """Extract ALL text from this image accurately.
-            Requirements:
-            - Read every word precisely, including Vietnamese text with proper diacritics
-            - Preserve the original formatting and structure of the text
-            - If there are multiple columns or sections, read them in logical order
-            - If no text is found, simply respond 'No text found'
-            - Do not add any explanations or comments
 
-            Please extract all text exactly as it appears in the image.""",
+        Requirements:
+        - Read every word precisely, including Vietnamese text with proper diacritics
+        - Preserve the original formatting and structure of the text
+        - If there are multiple columns or sections, read them in logical order
+        - If no text is found, simply respond 'No text found'
+        - Do not add any explanations or comments
+
+        Please extract all text exactly as it appears in the image.""",
             image
         ])
         
@@ -224,13 +94,16 @@ def upload_file():
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
         
+        # Convert image to base64 for display
+        with open(filepath, "rb") as image_file:
+            image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+            image_data_url = f"data:image/{filename.split('.')[-1].lower()};base64,{image_base64}"
+        
         # Extract text based on selected method
-        if method == 'openai':
-            extracted_text = extract_text_openai(filepath)
-        elif method == 'gemini':
+        if method == 'gemini':
             extracted_text = extract_text_gemini(filepath)
         else:
-            extracted_text = extract_text_tesseract(filepath, language)
+            extracted_text = "Gemini API only"
         
         # Clean up uploaded file
         os.remove(filepath)
@@ -243,7 +116,8 @@ def upload_file():
                              text=extracted_text, 
                              method=method.title(),
                              language=language_display,
-                             filename=file.filename)
+                             filename=file.filename,
+                             image_data=image_data_url)
     else:
         flash('Invalid file type. Please upload an image file.')
         return redirect(request.url)
@@ -266,12 +140,10 @@ def api_extract():
     file.save(filepath)
     
     try:
-        if method == 'openai':
-            text = extract_text_openai(filepath)
-        elif method == 'gemini':
+        if method == 'gemini':
             text = extract_text_gemini(filepath)
         else:
-            text = extract_text_tesseract(filepath, language)
+            text = "Gemini API only"
         
         os.remove(filepath)
         
