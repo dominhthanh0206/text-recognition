@@ -6,6 +6,7 @@ from werkzeug.utils import secure_filename
 from PIL import Image
 import pytesseract
 import openai
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -19,7 +20,7 @@ if os.path.exists(tessdata_path):
     pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'
+app.secret_key = os.getenv('SECRET_KEY', 'your-secret-key-here')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Configure upload folder
@@ -32,6 +33,11 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Configure OpenAI (optional)
 openai.api_key = os.getenv('OPENAI_API_KEY')
+
+# Configure Gemini (optional)
+gemini_api_key = os.getenv('GEMINI_API_KEY')
+if gemini_api_key:
+    genai.configure(api_key=gemini_api_key)
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -160,6 +166,36 @@ def extract_text_openai(image_path):
     except Exception as e:
         return f"Error with OpenAI Vision API: {str(e)}"
 
+def extract_text_gemini(image_path):
+    """Extract text using Google Gemini Vision API"""
+    try:
+        if not gemini_api_key:
+            return "Gemini API key not configured. Please set GEMINI_API_KEY in your .env file"
+        
+        # Load and prepare image
+        image = Image.open(image_path)
+        
+        # Initialize Gemini model
+        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        # Generate text extraction with improved prompt
+        response = model.generate_content([
+            """Extract ALL text from this image accurately.
+            Requirements:
+            - Read every word precisely, including Vietnamese text with proper diacritics
+            - Preserve the original formatting and structure of the text
+            - If there are multiple columns or sections, read them in logical order
+            - If no text is found, simply respond 'No text found'
+            - Do not add any explanations or comments
+
+            Please extract all text exactly as it appears in the image.""",
+            image
+        ])
+        
+        return response.text
+    except Exception as e:
+        return f"Error with Gemini Vision API: {str(e)}"
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -186,6 +222,8 @@ def upload_file():
         # Extract text based on selected method
         if method == 'openai':
             extracted_text = extract_text_openai(filepath)
+        elif method == 'gemini':
+            extracted_text = extract_text_gemini(filepath)
         else:
             extracted_text = extract_text_tesseract(filepath, language)
         
@@ -225,6 +263,8 @@ def api_extract():
     try:
         if method == 'openai':
             text = extract_text_openai(filepath)
+        elif method == 'gemini':
+            text = extract_text_gemini(filepath)
         else:
             text = extract_text_tesseract(filepath, language)
         
