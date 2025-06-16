@@ -169,8 +169,13 @@ def extract_text_openai(image_path):
 def extract_text_gemini(image_path):
     """Extract text using Google Gemini Vision API"""
     try:
+        # Debug: Print environment variable info
+        print(f"DEBUG: GEMINI_API_KEY exists: {bool(gemini_api_key)}")
+        print(f"DEBUG: GEMINI_API_KEY length: {len(gemini_api_key) if gemini_api_key else 0}")
+        print(f"DEBUG: All env vars starting with GEMINI: {[k for k in os.environ.keys() if 'GEMINI' in k]}")
+        
         if not gemini_api_key:
-            return "Gemini API key not configured. Please set GEMINI_API_KEY in your .env file"
+            return "Gemini API key not configured. Please set GEMINI_API_KEY in your .env file or environment variables"
         
         # Load and prepare image
         image = Image.open(image_path)
