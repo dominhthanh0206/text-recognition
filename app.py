@@ -80,52 +80,59 @@ def extract_text_gemini(image_path):
         
         # Generate text extraction with comprehensive structured field detection
         response = model.generate_content([
-            """Extract ALL text from this image and classify key pieces of information into structured categories.
+            """Please extract and classify any key pieces of information found in this image, such as:
+
+        Personal info (name, phone, date of birth, email...)
+        Transactional info (invoice numbers, order IDs, total amount, payment method...)
+        Dates (due dates, issue dates, etc.)
+        Locations or addresses
+        Any other structured or identifiable data
 
         IMPORTANT: Return ONLY valid JSON format, no markdown, no explanations, no code blocks.
 
         Response format:
         {
-            "text": "Complete extracted text here - preserve exact formatting",
+            "text": "Complete extracted text here - preserve exact formatting and line breaks",
             "personal_info": {
-                "name": "extracted full name if found, empty string if not",
-                "phone": "extracted phone number if found, empty string if not",
-                "email": "extracted email address if found, empty string if not",
-                "date_of_birth": "extracted date of birth if found, empty string if not",
-                "other_personal": "any other personal information (ID numbers, titles, etc.)"
+                "name": "full name if found, empty string if not",
+                "phone": "phone number if found, empty string if not",
+                "email": "email address if found, empty string if not",
+                "date_of_birth": "date of birth if found, empty string if not",
+                "other_personal": "ID numbers, titles, social security, employee ID, etc."
             },
             "transactional_info": {
-                "invoice_number": "extracted invoice/receipt number if found, empty string if not",
-                "order_id": "extracted order ID or reference number if found, empty string if not",
-                "total_amount": "extracted total amount/price if found, empty string if not",
-                "payment_method": "extracted payment method if found, empty string if not",
-                "other_transactional": "any other transaction-related info (taxes, discounts, etc.)"
+                "invoice_number": "invoice/receipt number if found, empty string if not",
+                "order_id": "order ID or reference number if found, empty string if not",
+                "total_amount": "total amount/price with currency if found, empty string if not",
+                "payment_method": "payment method (cash, card, transfer, etc.) if found, empty string if not",
+                "other_transactional": "taxes, discounts, subtotals, item details, etc."
             },
             "dates": {
-                "due_date": "extracted due date if found, empty string if not",
-                "issue_date": "extracted issue/created date if found, empty string if not",
-                "other_dates": "any other important dates found"
+                "due_date": "due date/deadline if found, empty string if not",
+                "issue_date": "issue/created/published date if found, empty string if not",
+                "other_dates": "expiry dates, birth dates, event dates, etc."
             },
             "locations": {
-                "addresses": "extracted addresses if found, empty string if not",
-                "other_locations": "any other location information (cities, countries, etc.)"
+                "addresses": "complete addresses with street, city, postal codes if found, empty string if not",
+                "other_locations": "cities, countries, regions, building names, etc."
             },
-            "other_data": "any other structured or identifiable data not covered above"
+            "other_data": "any other structured or identifiable data not covered above (license numbers, account numbers, company info, etc.)"
         }
 
-        Requirements:
-        - Read every word precisely, including Vietnamese and Japanese text with proper diacritics
-        - Preserve the original formatting and line breaks in the "text" field
-        - Carefully classify information into appropriate categories
-        - For personal info: Look for names, phone numbers, emails, dates of birth, ID numbers, titles
-        - For transactional info: Look for invoice numbers, order IDs, amounts, currencies, payment methods, taxes
-        - For dates: Look for due dates, issue dates, expiry dates, etc. in various formats
-        - For locations: Look for complete addresses, postal codes, cities, countries, regions
-        - If multiple instances found, include all separated by commas
-        - Use empty strings for missing fields
+        Extraction Guidelines:
+        - Read EVERY word precisely, including Vietnamese, Japanese, and all languages with proper diacritics
+        - Preserve original formatting and line breaks in the "text" field
+        - Look for ALL types of structured information, not just obvious ones
+        - For personal info: Names, phones, emails, DOB, IDs, titles, positions
+        - For transactional info: Invoice numbers, order IDs, amounts, currencies, payment methods, taxes, discounts
+        - For dates: Due dates, issue dates, expiry dates, birth dates, event dates - in ANY format
+        - For locations: Complete addresses, postal codes, cities, countries, regions, buildings
+        - Include multiple instances separated by commas
+        - Use empty strings for fields not found
+        - Be thorough - extract even small details that might be important
         - Return ONLY the JSON object, no other text
 
-        Extract and classify all information exactly as it appears in the image.""",
+        Extract and classify ALL information exactly as it appears in the image.""",
             image
         ])
         
@@ -233,6 +240,73 @@ def extract_text_gemini(image_path):
             "other_data": ""
         }
 
+def format_extracted_info(extraction_result):
+    """Format all extracted information into a single readable text"""
+    if not isinstance(extraction_result, dict):
+        return "No identifiable information found."
+    
+    formatted_info = []
+    
+    # Personal Information
+    personal_info = extraction_result.get('personal_info', {})
+    if personal_info.get('name'):
+        formatted_info.append(f"Name: {personal_info['name']}")
+    if personal_info.get('phone'):
+        formatted_info.append(f"Phone: {personal_info['phone']}")
+    if personal_info.get('email'):
+        formatted_info.append(f"Email: {personal_info['email']}")
+    if personal_info.get('date_of_birth'):
+        formatted_info.append(f"Date of Birth: {personal_info['date_of_birth']}")
+    if personal_info.get('other_personal'):
+        formatted_info.append(f"Other Personal Info: {personal_info['other_personal']}")
+    
+    # Transactional Information
+    transactional_info = extraction_result.get('transactional_info', {})
+    trans_items = []
+    if transactional_info.get('invoice_number'):
+        trans_items.append(f"Invoice: {transactional_info['invoice_number']}")
+    if transactional_info.get('order_id'):
+        trans_items.append(f"Order ID: {transactional_info['order_id']}")
+    if transactional_info.get('total_amount'):
+        trans_items.append(f"Total Amount: {transactional_info['total_amount']}")
+    if transactional_info.get('payment_method'):
+        trans_items.append(f"Payment Method: {transactional_info['payment_method']}")
+    if transactional_info.get('other_transactional'):
+        trans_items.append(f"Other Transaction Info: {transactional_info['other_transactional']}")
+    
+    if trans_items:
+        formatted_info.append("Transactional Information:")
+        for item in trans_items:
+            formatted_info.append(f"  - {item}")
+    
+    # Dates
+    dates = extraction_result.get('dates', {})
+    date_items = []
+    if dates.get('due_date'):
+        date_items.append(f"Due Date: {dates['due_date']}")
+    if dates.get('issue_date'):
+        date_items.append(f"Issue Date: {dates['issue_date']}")
+    if dates.get('other_dates'):
+        date_items.append(f"Other Dates: {dates['other_dates']}")
+    
+    if date_items:
+        formatted_info.append("Dates:")
+        for item in date_items:
+            formatted_info.append(f"  - {item}")
+    
+    # Locations
+    locations = extraction_result.get('locations', {})
+    if locations.get('addresses'):
+        formatted_info.append(f"Address: {locations['addresses']}")
+    if locations.get('other_locations'):
+        formatted_info.append(f"Other Locations: {locations['other_locations']}")
+    
+    # Other Data
+    if extraction_result.get('other_data'):
+        formatted_info.append(f"Other Structured Data: {extraction_result['other_data']}")
+    
+    return '\n'.join(formatted_info) if formatted_info else "No identifiable information found."
+
 @app.route('/')
 def index():
     return render_template('index.html')
@@ -301,12 +375,8 @@ def upload_file():
         language_display = language_names.get(language, language)
         
         return render_template('result.html', 
-                             text=extraction_result.get('text', ''),
-                             personal_info=extraction_result.get('personal_info', {}),
-                             transactional_info=extraction_result.get('transactional_info', {}),
-                             dates=extraction_result.get('dates', {}),
-                             locations=extraction_result.get('locations', {}),
-                             other_data=extraction_result.get('other_data', ''),
+                             raw_text=extraction_result.get('text', ''),
+                             formatted_info=format_extracted_info(extraction_result),
                              method=method.title(),
                              language=language_display,
                              filename=file.filename,
@@ -367,12 +437,8 @@ def api_extract():
         os.remove(filepath)
         
         return jsonify({
-            'text': extraction_result.get('text', ''),
-            'personal_info': extraction_result.get('personal_info', {}),
-            'transactional_info': extraction_result.get('transactional_info', {}),
-            'dates': extraction_result.get('dates', {}),
-            'locations': extraction_result.get('locations', {}),
-            'other_data': extraction_result.get('other_data', ''),
+            'raw_text': extraction_result.get('text', ''),
+            'formatted_info': format_extracted_info(extraction_result),
             'method': method,
             'language': language,
             'filename': file.filename
