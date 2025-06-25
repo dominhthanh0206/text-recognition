@@ -38,7 +38,7 @@
             </div>
 
             <div class="row mb-4">
-                <div class="col-md-12">
+                <div class="col-md-6">
                     <div class="result-card p-4">
                         <h5 class="mb-3">
                             <i class="fas fa-text-width me-2"></i>Extracted Text:
@@ -46,8 +46,231 @@
                                 <i class="fas fa-copy me-1"></i>Copy
                             </button>
                         </h5>
-                        <div class="border rounded p-3" style="background-color: #f8f9fa; min-height: 300px;">
-                            <pre id="extractedText" style="white-space: pre-wrap; font-family: 'Arial', sans-serif; margin: 0; line-height: 1.5;">{{ text if text else 'No text found in the image.' }}</pre>
+                        <div class="border rounded p-3" style="background-color: #f8f9fa; min-height: 400px; max-height: 500px; overflow-y: auto;">
+                            <pre id="extractedText" style="white-space: pre-wrap; font-family: 'Arial', sans-serif; margin: 0; line-height: 1.5; font-size: 13px;">{{ text if text else 'No text found in the image.' }}</pre>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="result-card p-4" style="max-height: 500px; overflow-y: auto;">
+                        <h5 class="mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Identifiable Information
+                        </h5>
+                        
+                        <!-- Personal Information -->
+                        <div class="accordion mb-3" id="infoAccordion">
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="personalHeader">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#personalCollapse">
+                                        <i class="fas fa-user me-2 text-primary"></i>
+                                        <strong>Personal Information</strong>
+                                    </button>
+                                </h2>
+                                <div id="personalCollapse" class="accordion-collapse collapse" data-bs-parent="#infoAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Name:</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" id="nameField" value="{{ personal_info.name if personal_info.name else '' }}" readonly>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('nameField')" {% if not personal_info.name %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Phone:</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" id="phoneField" value="{{ personal_info.phone if personal_info.phone else '' }}" readonly>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('phoneField')" {% if not personal_info.phone %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Email:</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" id="emailField" value="{{ personal_info.email if personal_info.email else '' }}" readonly>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('emailField')" {% if not personal_info.email %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Date of Birth:</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" id="dobField" value="{{ personal_info.date_of_birth if personal_info.date_of_birth else '' }}" readonly>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('dobField')" {% if not personal_info.date_of_birth %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Other Personal:</label>
+                                            <div class="input-group input-group-sm">
+                                                <textarea class="form-control" id="otherPersonalField" rows="2" readonly>{{ personal_info.other_personal if personal_info.other_personal else '' }}</textarea>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('otherPersonalField')" {% if not personal_info.other_personal %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Transactional Information -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="transactionHeader">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#transactionCollapse">
+                                        <i class="fas fa-receipt me-2 text-success"></i>
+                                        <strong>Transactional Information</strong>
+                                    </button>
+                                </h2>
+                                <div id="transactionCollapse" class="accordion-collapse collapse" data-bs-parent="#infoAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Invoice Number:</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" id="invoiceField" value="{{ transactional_info.invoice_number if transactional_info.invoice_number else '' }}" readonly>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('invoiceField')" {% if not transactional_info.invoice_number %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Order ID:</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" id="orderIdField" value="{{ transactional_info.order_id if transactional_info.order_id else '' }}" readonly>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('orderIdField')" {% if not transactional_info.order_id %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Total Amount:</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" id="totalAmountField" value="{{ transactional_info.total_amount if transactional_info.total_amount else '' }}" readonly>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('totalAmountField')" {% if not transactional_info.total_amount %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Payment Method:</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" id="paymentMethodField" value="{{ transactional_info.payment_method if transactional_info.payment_method else '' }}" readonly>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('paymentMethodField')" {% if not transactional_info.payment_method %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Other Transaction Info:</label>
+                                            <div class="input-group input-group-sm">
+                                                <textarea class="form-control" id="otherTransactionField" rows="2" readonly>{{ transactional_info.other_transactional if transactional_info.other_transactional else '' }}</textarea>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('otherTransactionField')" {% if not transactional_info.other_transactional %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Dates -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="datesHeader">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#datesCollapse">
+                                        <i class="fas fa-calendar me-2 text-warning"></i>
+                                        <strong>Dates</strong>
+                                    </button>
+                                </h2>
+                                <div id="datesCollapse" class="accordion-collapse collapse" data-bs-parent="#infoAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Due Date:</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" id="dueDateField" value="{{ dates.due_date if dates.due_date else '' }}" readonly>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('dueDateField')" {% if not dates.due_date %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Issue Date:</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" class="form-control" id="issueDateField" value="{{ dates.issue_date if dates.issue_date else '' }}" readonly>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('issueDateField')" {% if not dates.issue_date %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Other Dates:</label>
+                                            <div class="input-group input-group-sm">
+                                                <textarea class="form-control" id="otherDatesField" rows="2" readonly>{{ dates.other_dates if dates.other_dates else '' }}</textarea>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('otherDatesField')" {% if not dates.other_dates %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Locations -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="locationsHeader">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#locationsCollapse">
+                                        <i class="fas fa-map-marker-alt me-2 text-danger"></i>
+                                        <strong>Locations</strong>
+                                    </button>
+                                </h2>
+                                <div id="locationsCollapse" class="accordion-collapse collapse" data-bs-parent="#infoAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Addresses:</label>
+                                            <div class="input-group input-group-sm">
+                                                <textarea class="form-control" id="addressesField" rows="3" readonly>{{ locations.addresses if locations.addresses else '' }}</textarea>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('addressesField')" {% if not locations.addresses %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Other Locations:</label>
+                                            <div class="input-group input-group-sm">
+                                                <textarea class="form-control" id="otherLocationsField" rows="2" readonly>{{ locations.other_locations if locations.other_locations else '' }}</textarea>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('otherLocationsField')" {% if not locations.other_locations %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Other Data -->
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="otherHeader">
+                                    <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#otherCollapse">
+                                        <i class="fas fa-database me-2 text-info"></i>
+                                        <strong>Other Structured Data</strong>
+                                    </button>
+                                </h2>
+                                <div id="otherCollapse" class="accordion-collapse collapse" data-bs-parent="#infoAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-2">
+                                            <label class="form-label fw-bold small">Additional Information:</label>
+                                            <div class="input-group input-group-sm">
+                                                <textarea class="form-control" id="otherDataField" rows="3" readonly>{{ other_data if other_data else '' }}</textarea>
+                                                <button class="btn btn-outline-secondary" type="button" onclick="copyField('otherDataField')" {% if not other_data %}disabled{% endif %}>
+                                                    <i class="fas fa-copy"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -152,5 +375,61 @@ function shareText() {
         alert('Text copied to clipboard! You can now paste it anywhere.');
     }
 }
+
+function copyField(fieldId) {
+    const field = document.getElementById(fieldId);
+    const text = field.value;
+    
+    if (text.trim() === '') {
+        return;
+    }
+    
+    navigator.clipboard.writeText(text).then(function() {
+        // Show success message
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-check"></i>';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-outline-secondary');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 1500);
+    }).catch(function(err) {
+        console.error('Could not copy text: ', err);
+        // Fallback for older browsers
+        field.select();
+        document.execCommand('copy');
+        alert('Field copied to clipboard!');
+    });
+}
+
+// Function to expand accordion sections that have data
+document.addEventListener('DOMContentLoaded', function() {
+    // Check each accordion section and expand if it has data
+    const sections = [
+        { id: 'personalCollapse', fields: ['nameField', 'phoneField', 'emailField', 'dobField', 'otherPersonalField'] },
+        { id: 'transactionCollapse', fields: ['invoiceField', 'orderIdField', 'totalAmountField', 'paymentMethodField', 'otherTransactionField'] },
+        { id: 'datesCollapse', fields: ['dueDateField', 'issueDateField', 'otherDatesField'] },
+        { id: 'locationsCollapse', fields: ['addressesField', 'otherLocationsField'] },
+        { id: 'otherCollapse', fields: ['otherDataField'] }
+    ];
+
+    sections.forEach(section => {
+        const hasData = section.fields.some(fieldId => {
+            const field = document.getElementById(fieldId);
+            return field && field.value.trim() !== '';
+        });
+        
+        if (hasData) {
+            const collapseElement = document.getElementById(section.id);
+            if (collapseElement) {
+                const bsCollapse = new bootstrap.Collapse(collapseElement, { show: true });
+            }
+        }
+    });
+});
 </script>
 {% endblock %} 

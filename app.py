@@ -36,7 +36,7 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def extract_text_gemini(image_path):
-    """Extract text using Google Gemini Vision API"""
+    """Extract text using Google Gemini Vision API with comprehensive structured field extraction"""
     try:
         # Debug: Print environment variable info
         print(f"DEBUG: GEMINI_API_KEY exists: {bool(gemini_api_key)}")
@@ -44,7 +44,33 @@ def extract_text_gemini(image_path):
         print(f"DEBUG: All env vars starting with GEMINI: {[k for k in os.environ.keys() if 'GEMINI' in k]}")
         
         if not gemini_api_key:
-            return "Gemini API key not configured. Please set GEMINI_API_KEY in your .env file or environment variables"
+            return {
+                "text": "Gemini API key not configured. Please set GEMINI_API_KEY in your .env file or environment variables",
+                "personal_info": {
+                    "name": "",
+                    "phone": "",
+                    "email": "",
+                    "date_of_birth": "",
+                    "other_personal": ""
+                },
+                "transactional_info": {
+                    "invoice_number": "",
+                    "order_id": "",
+                    "total_amount": "",
+                    "payment_method": "",
+                    "other_transactional": ""
+                },
+                "dates": {
+                    "due_date": "",
+                    "issue_date": "",
+                    "other_dates": ""
+                },
+                "locations": {
+                    "addresses": "",
+                    "other_locations": ""
+                },
+                "other_data": ""
+            }
         
         # Load and prepare image
         image = Image.open(image_path)
@@ -52,24 +78,160 @@ def extract_text_gemini(image_path):
         # Initialize Gemini model
         model = genai.GenerativeModel('gemini-1.5-flash')
         
-        # Generate text extraction with improved prompt
+        # Generate text extraction with comprehensive structured field detection
         response = model.generate_content([
-            """Extract ALL text from this image accurately.
+            """Extract ALL text from this image and classify key pieces of information into structured categories.
+
+        IMPORTANT: Return ONLY valid JSON format, no markdown, no explanations, no code blocks.
+
+        Response format:
+        {
+            "text": "Complete extracted text here - preserve exact formatting",
+            "personal_info": {
+                "name": "extracted full name if found, empty string if not",
+                "phone": "extracted phone number if found, empty string if not",
+                "email": "extracted email address if found, empty string if not",
+                "date_of_birth": "extracted date of birth if found, empty string if not",
+                "other_personal": "any other personal information (ID numbers, titles, etc.)"
+            },
+            "transactional_info": {
+                "invoice_number": "extracted invoice/receipt number if found, empty string if not",
+                "order_id": "extracted order ID or reference number if found, empty string if not",
+                "total_amount": "extracted total amount/price if found, empty string if not",
+                "payment_method": "extracted payment method if found, empty string if not",
+                "other_transactional": "any other transaction-related info (taxes, discounts, etc.)"
+            },
+            "dates": {
+                "due_date": "extracted due date if found, empty string if not",
+                "issue_date": "extracted issue/created date if found, empty string if not",
+                "other_dates": "any other important dates found"
+            },
+            "locations": {
+                "addresses": "extracted addresses if found, empty string if not",
+                "other_locations": "any other location information (cities, countries, etc.)"
+            },
+            "other_data": "any other structured or identifiable data not covered above"
+        }
 
         Requirements:
-        - Read every word precisely, including Vietnamese text with proper diacritics
-        - Preserve the original formatting and structure of the text
-        - If there are multiple columns or sections, read them in logical order
-        - If no text is found, simply respond 'No text found'
-        - Do not add any explanations or comments
+        - Read every word precisely, including Vietnamese and Japanese text with proper diacritics
+        - Preserve the original formatting and line breaks in the "text" field
+        - Carefully classify information into appropriate categories
+        - For personal info: Look for names, phone numbers, emails, dates of birth, ID numbers, titles
+        - For transactional info: Look for invoice numbers, order IDs, amounts, currencies, payment methods, taxes
+        - For dates: Look for due dates, issue dates, expiry dates, etc. in various formats
+        - For locations: Look for complete addresses, postal codes, cities, countries, regions
+        - If multiple instances found, include all separated by commas
+        - Use empty strings for missing fields
+        - Return ONLY the JSON object, no other text
 
-        Please extract all text exactly as it appears in the image.""",
+        Extract and classify all information exactly as it appears in the image.""",
             image
         ])
         
-        return response.text
+        # Try to parse JSON response
+        try:
+            import json
+            # Clean the response text - remove markdown code blocks if present
+            response_text = response.text.strip()
+            if response_text.startswith('```json'):
+                response_text = response_text.replace('```json', '').replace('```', '').strip()
+            elif response_text.startswith('```'):
+                response_text = response_text.replace('```', '').strip()
+            
+            result = json.loads(response_text)
+            
+            # Ensure result is a dictionary and has expected structure
+            if isinstance(result, dict) and 'text' in result:
+                return result
+            else:
+                # If not proper structure, create one with the response as text
+                return {
+                    "text": response.text,
+                    "personal_info": {
+                        "name": "",
+                        "phone": "",
+                        "email": "",
+                        "date_of_birth": "",
+                        "other_personal": ""
+                    },
+                    "transactional_info": {
+                        "invoice_number": "",
+                        "order_id": "",
+                        "total_amount": "",
+                        "payment_method": "",
+                        "other_transactional": ""
+                    },
+                    "dates": {
+                        "due_date": "",
+                        "issue_date": "",
+                        "other_dates": ""
+                    },
+                    "locations": {
+                        "addresses": "",
+                        "other_locations": ""
+                    },
+                    "other_data": ""
+                }
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            print(f"DEBUG: JSON parsing failed: {e}")
+            print(f"DEBUG: Raw response: {response.text[:500]}...")
+            # Fallback if response is not valid JSON
+            return {
+                "text": response.text,
+                "personal_info": {
+                    "name": "",
+                    "phone": "",
+                    "email": "",
+                    "date_of_birth": "",
+                    "other_personal": ""
+                },
+                "transactional_info": {
+                    "invoice_number": "",
+                    "order_id": "",
+                    "total_amount": "",
+                    "payment_method": "",
+                    "other_transactional": ""
+                },
+                "dates": {
+                    "due_date": "",
+                    "issue_date": "",
+                    "other_dates": ""
+                },
+                "locations": {
+                    "addresses": "",
+                    "other_locations": ""
+                },
+                "other_data": ""
+            }
     except Exception as e:
-        return f"Error with Gemini Vision API: {str(e)}"
+        return {
+            "text": f"Error with Gemini Vision API: {str(e)}",
+            "personal_info": {
+                "name": "",
+                "phone": "",
+                "email": "",
+                "date_of_birth": "",
+                "other_personal": ""
+            },
+            "transactional_info": {
+                "invoice_number": "",
+                "order_id": "",
+                "total_amount": "",
+                "payment_method": "",
+                "other_transactional": ""
+            },
+            "dates": {
+                "due_date": "",
+                "issue_date": "",
+                "other_dates": ""
+            },
+            "locations": {
+                "addresses": "",
+                "other_locations": ""
+            },
+            "other_data": ""
+        }
 
 @app.route('/')
 def index():
@@ -101,9 +263,35 @@ def upload_file():
         
         # Extract text based on selected method
         if method == 'gemini':
-            extracted_text = extract_text_gemini(filepath)
+            extraction_result = extract_text_gemini(filepath)
         else:
-            extracted_text = "Gemini API only"
+            extraction_result = {
+                "text": "Gemini API only",
+                "personal_info": {
+                    "name": "",
+                    "phone": "",
+                    "email": "",
+                    "date_of_birth": "",
+                    "other_personal": ""
+                },
+                "transactional_info": {
+                    "invoice_number": "",
+                    "order_id": "",
+                    "total_amount": "",
+                    "payment_method": "",
+                    "other_transactional": ""
+                },
+                "dates": {
+                    "due_date": "",
+                    "issue_date": "",
+                    "other_dates": ""
+                },
+                "locations": {
+                    "addresses": "",
+                    "other_locations": ""
+                },
+                "other_data": ""
+            }
         
         # Clean up uploaded file
         os.remove(filepath)
@@ -113,7 +301,12 @@ def upload_file():
         language_display = language_names.get(language, language)
         
         return render_template('result.html', 
-                             text=extracted_text, 
+                             text=extraction_result.get('text', ''),
+                             personal_info=extraction_result.get('personal_info', {}),
+                             transactional_info=extraction_result.get('transactional_info', {}),
+                             dates=extraction_result.get('dates', {}),
+                             locations=extraction_result.get('locations', {}),
+                             other_data=extraction_result.get('other_data', ''),
                              method=method.title(),
                              language=language_display,
                              filename=file.filename,
@@ -141,14 +334,45 @@ def api_extract():
     
     try:
         if method == 'gemini':
-            text = extract_text_gemini(filepath)
+            extraction_result = extract_text_gemini(filepath)
         else:
-            text = "Gemini API only"
+            extraction_result = {
+                "text": "Gemini API only",
+                "personal_info": {
+                    "name": "",
+                    "phone": "",
+                    "email": "",
+                    "date_of_birth": "",
+                    "other_personal": ""
+                },
+                "transactional_info": {
+                    "invoice_number": "",
+                    "order_id": "",
+                    "total_amount": "",
+                    "payment_method": "",
+                    "other_transactional": ""
+                },
+                "dates": {
+                    "due_date": "",
+                    "issue_date": "",
+                    "other_dates": ""
+                },
+                "locations": {
+                    "addresses": "",
+                    "other_locations": ""
+                },
+                "other_data": ""
+            }
         
         os.remove(filepath)
         
         return jsonify({
-            'text': text,
+            'text': extraction_result.get('text', ''),
+            'personal_info': extraction_result.get('personal_info', {}),
+            'transactional_info': extraction_result.get('transactional_info', {}),
+            'dates': extraction_result.get('dates', {}),
+            'locations': extraction_result.get('locations', {}),
+            'other_data': extraction_result.get('other_data', ''),
             'method': method,
             'language': language,
             'filename': file.filename

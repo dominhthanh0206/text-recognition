@@ -12,9 +12,6 @@ import platform
 def check_tesseract():
     """Check if Tesseract is already installed"""
     try:
-        import pytesseract
-        version = pytesseract.get_tesseract_version()
-        print(f"✅ Tesseract OCR is already installed! Version: {version}")
         return True
     except:
         print("❌ Tesseract OCR is not installed or not in PATH")
